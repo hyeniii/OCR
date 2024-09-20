@@ -57,5 +57,5 @@ class MNISTAndKaggleAZCombined(Dataset):
         train_len = int(len(self.data) * 0.8)
         test_len = len(self.data) - train_len
 
-        train_ds, test_ds = random_split(self.data, [train_len, test_len])
+        train_ds, test_ds = random_split(self, [train_len, test_len])
         return train_ds, test_ds
