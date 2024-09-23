@@ -1,3 +1,6 @@
+import os
+import zipfile
+import urllib.request
 import torch
 from torch.utils.data import Dataset, random_split
 from torchvision.datasets import MNIST
@@ -5,18 +8,21 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelBinarizer
 
-
 class MNISTAndKaggleAZCombined(Dataset):
     """
     Class that loads MNIST data and Kaggle A-Z data combines them and binarize the labels
     """
     def __init__(self, mnist_root, az_csv_file, transforms=None):
         # Load and combine MNIST data
-        mnist_train = MNIST(root=mnist_root, train=True, transform=transforms, download=True, target_transform=None)
-        mnist_test = MNIST(root=mnist_root, train=False, transform=transforms, download=True, target_transform=None)
+        mnist_exists = os.path.exists(os.path.join(mnist_root, 'MNIST', 'raw'))
+        mnist_train = MNIST(root=mnist_root, train=True, transform=transforms, download=not mnist_exists, target_transform=None)
+        mnist_test = MNIST(root=mnist_root, train=False, transform=transforms, download=not mnist_exists, target_transform=None)
         self.mnist_data = mnist_train + mnist_test
 
         # Load AZ data
+        if not os.path.exists(az_csv_file):
+            print("AZ data not found. Downloading...")
+            self.download_and_extract_az_data()
         self.az_data = pd.read_csv(az_csv_file).values
 
         # Combine MNIST and AZ data
@@ -45,6 +51,18 @@ class MNISTAndKaggleAZCombined(Dataset):
         
         one_hot_label = self.targets[idx]
         return img, one_hot_label
+
+    def download_and_extract_az_data(self):
+        url = 'https://iaexpert.academy/arquivos/alfabeto_A-Z.zip'
+        zip_path = 'alfabeto_A-Z.zip'
+
+        # Download file
+        urllib.request.urlretrieve(url, zip_path)
+
+        # Unzip file zip object
+        zip_obj = zipfile.ZipFile(file= zip_path, mode= 'r')
+        zip_obj.extractall('data/')
+        zip_obj.close()
 
     def get_class_weights(self):
         classes_total = torch.stack(self.targets).sum(dim=0)
